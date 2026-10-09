@@ -41,6 +41,22 @@ ctx.endTransparencyLayer()
 ctx.restoreGState()
 ctx.addPath(arrow); ctx.setStrokeColor(color(0.18, 0.32, 0.88, 0.55)); ctx.setLineWidth(1); ctx.strokePath()
 
+// Название сверху. AppKit рисует в своей системе координат — возвращаем y вверх.
+ctx.saveGState()
+ctx.translateBy(x: 0, y: H); ctx.scaleBy(x: 1, y: -1)
+NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+let center = NSMutableParagraphStyle(); center.alignment = .center
+let glow = NSShadow()
+glow.shadowColor = NSColor(srgbRed: 0.05, green: 0.12, blue: 0.45, alpha: 0.35)
+glow.shadowBlurRadius = 6; glow.shadowOffset = NSSize(width: 0, height: -1)
+let title = NSAttributedString(string: "Pipa", attributes: [
+    .font: NSFont.systemFont(ofSize: 30, weight: .bold), .foregroundColor: NSColor.white,
+    .paragraphStyle: center, .shadow: glow,
+])
+let th = title.size().height
+title.draw(in: CGRect(x: 0, y: H - 36 - th, width: W, height: th))
+ctx.restoreGState()
+
 let rep = NSBitmapImageRep(cgImage: ctx.makeImage()!)
 rep.size = NSSize(width: W, height: H)   // 72 dpi для ×1, 144 для ×2
 try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
