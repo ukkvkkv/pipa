@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             for w in NSApp.windows where w.styleMask.contains(.titled) {
                 w.standardWindowButton(.zoomButton)?.isEnabled = false
+                w.titleVisibility = .hidden   // macOS 14: toolbar(removing: .title) там нет
             }
         }
     }

@@ -198,7 +198,7 @@ struct SearchField: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 36)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .glassBackground(Capsule(), interactive: true)
         .contentShape(.capsule)
         .onTapGesture { focused = true }
         .onAppear { if autofocus { focused = true } }

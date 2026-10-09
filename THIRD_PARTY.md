@@ -12,14 +12,15 @@
 | libimobiledevice-glue | 1.3.3 | LGPL-2.1 | [libimobiledevice/libimobiledevice-glue](https://github.com/libimobiledevice/libimobiledevice-glue) |
 | libplist | 2.8.0 | LGPL-2.1 | [libimobiledevice/libplist](https://github.com/libimobiledevice/libplist) |
 | libusbmuxd | 2.1.1 | LGPL-2.1 | [libimobiledevice/libusbmuxd](https://github.com/libimobiledevice/libusbmuxd) |
-| libzip | 1.11.4 | BSD-3-Clause | [nih-at/libzip](https://github.com/nih-at/libzip) |
-| OpenSSL | 3.6 | Apache-2.0 | [openssl/openssl](https://github.com/openssl/openssl) |
-| xz (liblzma) | 5.8 | 0BSD | [tukaani-project/xz](https://github.com/tukaani-project/xz) |
-| zstd | 1.5.7 | BSD-3-Clause | [facebook/zstd](https://github.com/facebook/zstd) |
+| libzip | 1.12 | BSD-3-Clause | [nih-at/libzip](https://github.com/nih-at/libzip) |
+| OpenSSL | 3.6.5 | Apache-2.0 | [openssl/openssl](https://github.com/openssl/openssl) |
+| libtatsu | 1.0.5 | LGPL-2.1 | [libimobiledevice/libtatsu](https://github.com/libimobiledevice/libtatsu) |
 
 `ideviceinstaller` и `ideviceinfo` — отдельные программы, Pipa запускает их как
-внешние процессы и не линкуется с ними. Они собраны Homebrew из исходников по
-ссылкам выше без изменений.
+внешние процессы и не линкуется с ними. Они собраны из исходников по ссылкам
+выше без изменений, статически со всеми библиотеками из таблицы (кроме
+ipatool-cpp), скриптом [`vendor/idevice/build.sh`](vendor/idevice/build.sh) —
+он же скачивает точные архивы исходников и сверяет их SHA-256.
 
 Список популярных приложений (`AppsList.txt`) Pipa берёт из
 [kda2495/IPA_Downloader](https://github.com/kda2495/IPA_Downloader) (MIT) —

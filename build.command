@@ -1,14 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# Сборка «Pipa.app»: один бандл, внутри всё нужное —
-# интерфейс на SwiftUI, ipatool-cpp и ideviceinstaller со своими
-# библиотеками из Homebrew (у пользователя Homebrew не нужен).
+# Сборка «Pipa.app»: один universal-бандл (Apple Silicon + Intel, macOS 14+),
+# внутри всё нужное — интерфейс на SwiftUI, ipatool-cpp и ideviceinstaller
+# (vendor/idevice, собран статически своим build.sh — Homebrew не нужен).
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP="$ROOT/Pipa.app"
-VERSION="1.13.0"
-SCRATCH="$(getconf DARWIN_USER_CACHE_DIR)/pipa/swift-build"
+VERSION="1.14.0"
+SCRATCH="$(getconf DARWIN_USER_CACHE_DIR)pipa/swift-build"
+MIN_MACOS="14.0"
 
 # --------------------------------------------------------------- иконка
 ICON="$ROOT/assets/AppIcon.icns"
@@ -31,54 +32,33 @@ if [[ ! -f "$PLUGINS/libSwiftUIMacros.dylib" && -d "$SDK26" ]]; then
   export SDKROOT="$(cd "$SDK26" && pwd)"
 fi
 
-echo "Собираю интерфейс…"
-swift build --package-path "$ROOT" --scratch-path "$SCRATCH" -c release
-BIN="$(swift build --package-path "$ROOT" --scratch-path "$SCRATCH" -c release --show-bin-path)/Pipa"
-
-# Liquid Glass включается по версии SDK в LC_BUILD_VERSION, а SwiftPM пишет туда minos.
+# Каждая архитектура — своей сборкой, потом lipo. Liquid Glass включается по
+# версии SDK в LC_BUILD_VERSION, а SwiftPM пишет туда minos — чиним vtool.
 SDK_VER="$(xcrun --sdk "${SDKROOT:-macosx}" --show-sdk-version)"
-MIN_OS="$(otool -l "$BIN" | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
-vtool -set-build-version macos "$MIN_OS" "$SDK_VER" -replace -output "$BIN" "$BIN"
+THIN=()
+for arch in arm64 x86_64; do
+  echo "Собираю интерфейс ($arch)…"
+  args=(--package-path "$ROOT" --scratch-path "$SCRATCH-$arch" -c release --triple "$arch-apple-macosx$MIN_MACOS")
+  swift build "${args[@]}"
+  bin="$(swift build "${args[@]}" --show-bin-path)/Pipa"
+  vtool -set-build-version macos "$MIN_MACOS" "$SDK_VER" -replace -output "$bin.sdk" "$bin"
+  THIN+=("$bin.sdk")
+done
+BIN="$(mktemp -d)/Pipa"
+lipo -create "${THIN[@]}" -output "$BIN"
 
 # --------------------------------------------------------------- бандл
 echo "Собираю бандл…"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers" "$APP/Contents/Frameworks"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers"
 cp "$BIN" "$APP/Contents/MacOS/Pipa"
 cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
 
-# ipatool под архитектуру сборки (интерфейс и библиотеки Homebrew — тоже только она).
-case "$(uname -m)" in arm64) IPA_ARCH=arm64 ;; *) IPA_ARCH=amd64 ;; esac
-cp "$ROOT/vendor/ipatool/ipatool-cpp-macOS-$IPA_ARCH" "$APP/Contents/Helpers/ipatool"
-chmod +x "$APP/Contents/Helpers/ipatool"
-
-# ideviceinstaller / ideviceinfo + их dylib из Homebrew, пути переписаны на бандл.
-FW="$APP/Contents/Frameworks"
-bundle_deps() {
-  local file="$1" is_lib="$2"
-  otool -L "$file" | tail -n +2 | awk '{print $1}' | while read -r dep; do
-    [[ "$dep" == /opt/homebrew/* || "$dep" == /usr/local/* ]] || continue
-    local name; name="$(basename "$dep")"
-    if [[ ! -f "$FW/$name" ]]; then
-      cp "$(readlink -f "$dep")" "$FW/$name"
-      chmod u+w "$FW/$name"
-      install_name_tool -id "@loader_path/$name" "$FW/$name" 2>/dev/null
-      bundle_deps "$FW/$name" 1
-    fi
-    if [[ "$is_lib" == 1 ]]; then
-      install_name_tool -change "$dep" "@loader_path/$name" "$file" 2>/dev/null
-    else
-      install_name_tool -change "$dep" "@executable_path/../Frameworks/$name" "$file" 2>/dev/null
-    fi
-  done
-}
-for tool in ideviceinstaller ideviceinfo; do
-  SRC_TOOL="$(command -v $tool || true)"
-  if [[ -z "$SRC_TOOL" ]]; then echo "ВНИМАНИЕ: $tool не найден — установка на iPhone будет недоступна"; continue; fi
-  cp "$(readlink -f "$SRC_TOOL")" "$APP/Contents/Helpers/$tool"
-  chmod u+w "$APP/Contents/Helpers/$tool"
-  bundle_deps "$APP/Contents/Helpers/$tool" 0
-done
+# ipatool: релиз ipatool-cpp — два отдельных файла, склеиваем в один.
+lipo -create "$ROOT/vendor/ipatool/ipatool-cpp-macOS-arm64" "$ROOT/vendor/ipatool/ipatool-cpp-macOS-amd64" \
+  -output "$APP/Contents/Helpers/ipatool"
+cp "$ROOT/vendor/idevice/ideviceinstaller" "$ROOT/vendor/idevice/ideviceinfo" "$APP/Contents/Helpers/"
+chmod +x "$APP/Contents/Helpers/"*
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -94,7 +74,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleDevelopmentRegion</key><string>ru</string>
-  <key>LSMinimumSystemVersion</key><string>26.0</string>
+  <key>LSMinimumSystemVersion</key><string>$MIN_MACOS</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
@@ -102,7 +82,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 # Подпись «на месте»: сначала вложенное, потом бандл.
-find "$APP/Contents/Frameworks" "$APP/Contents/Helpers" -type f -exec codesign --force --sign - {} \; 2>/dev/null
+find "$APP/Contents/Helpers" -type f -exec codesign --force --sign - {} \;
 codesign --force --sign - "$APP"
 xattr -cr "$APP"
 

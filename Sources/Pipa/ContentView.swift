@@ -15,42 +15,13 @@ struct ContentView: View {
             }
             .background(alignment: .top) { HeaderStrip() }
             .navigationTitle(model.section.title)
-            .toolbar(removing: .title)
-            .toolbar { toolbar }
+            .hiddenToolbarTitle()
+            .modifier(MainToolbar())
             .toolbarBackground(.hidden, for: .windowToolbar)
         }
         .sheet(isPresented: $model.showLogin) {
             LoginSheet()
         }
-    }
-
-    @ToolbarContentBuilder
-    private var toolbar: some ToolbarContent {
-        // Переключатель разделов — иконками, одним сегментом.
-        ToolbarItem(placement: .navigation) {
-            Picker("Раздел", selection: Bindable(model).section) {
-                ForEach(Section.allCases, id: \.self) { s in
-                    Label(s.title, systemImage: s.symbol).tag(s)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelStyle(.iconOnly)
-            .labelsHidden()
-            .fixedSize()
-        }
-        // Капсула — к правому краю.
-        ToolbarSpacer(.flexible)
-        // Кнопки — одной своей капсулой: системное стекло под пунктом выключено.
-        ToolbarItem(placement: .primaryAction) {
-            ToolbarCapsule {
-                if !model.jobs.isEmpty { DownloadsButton() }
-                SettingsLink {
-                    Label("Настройки", systemImage: "gearshape")
-                }
-                .toolTip("Настройки")
-            }
-        }
-        .sharedBackgroundVisibility(.hidden)
     }
 
     @ViewBuilder
@@ -73,7 +44,7 @@ struct ContentView: View {
                 Text("Войдите аккаунтом, которым покупались приложения.")
                     .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 Button("Войти…") { model.showLogin = true }
-                    .buttonStyle(.glassProminent)
+                    .glassButton(prominent: true)
                     .controlSize(.large)
                     .padding(.top, 4)
             }
@@ -133,6 +104,52 @@ struct DownloadsButton: View {
     }
 }
 
+/// Панель окна: слева разделы, справа капсула с загрузками и настройками.
+/// В macOS 26 капсуле отключают системное стекло (у неё своё) и отодвигают
+/// её вправо ToolbarSpacer — до macOS 26 этих API нет, и они не нужны.
+private struct MainToolbar: ViewModifier {
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content.toolbar {
+                ToolbarItem(placement: .navigation) { sections }
+                ToolbarSpacer(.flexible)
+                ToolbarItem(placement: .primaryAction) { buttons }
+                    .sharedBackgroundVisibility(.hidden)
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .navigation) { sections }
+                ToolbarItem(placement: .primaryAction) { buttons }
+            }
+        }
+    }
+
+    // Переключатель разделов — иконками, одним сегментом.
+    private var sections: some View {
+        Picker("Раздел", selection: Bindable(model).section) {
+            ForEach(Section.allCases, id: \.self) { s in
+                Label(s.title, systemImage: s.symbol).tag(s)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelStyle(.iconOnly)
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    private var buttons: some View {
+        ToolbarCapsule {
+            if !model.jobs.isEmpty { DownloadsButton() }
+            SettingsLink {
+                Label("Настройки", systemImage: "gearshape")
+            }
+            .toolTip("Настройки")
+        }
+    }
+}
+
 /// Капсула кнопок-иконок, как в Copy Hunter и Почте: своё стекло,
 /// у кнопок — подсветка под курсором.
 struct ToolbarCapsule<Content: View>: View {
@@ -145,7 +162,7 @@ struct ToolbarCapsule<Content: View>: View {
             .padding(.horizontal, 4)
             .frame(height: 36)
             .fixedSize()
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .glassBackground(Capsule(), interactive: true)
     }
 }
 
@@ -248,7 +265,7 @@ struct ToastStack: View {
                     .lineLimit(3)
                     .foregroundStyle(t.isError ? AnyShapeStyle(.orange) : AnyShapeStyle(.primary))
                     .padding(.horizontal, 14).padding(.vertical, 8)
-                    .glassEffect(.regular, in: .capsule)
+                    .glassBackground(Capsule())
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -309,10 +326,10 @@ struct LoginSheet: View {
                 Spacer()
                 Button("Отмена") { dismiss(); Task { await model.cancelLogin() } }
                     .keyboardShortcut(.cancelAction)
-                    .buttonStyle(.glass)
+                    .glassButton()
                 Button(needsCode ? "Подтвердить" : "Войти", action: submit)
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.glassProminent)
+                    .glassButton(prominent: true)
                     .disabled(busy || !valid)
             }
         }

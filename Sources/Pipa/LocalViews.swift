@@ -25,7 +25,7 @@ struct LibraryView: View {
                         Text("Скачанные .ipa появятся здесь.")
                     } actions: {
                         Button("Открыть папку") { NSWorkspace.shared.open(Paths.apps) }
-                            .buttonStyle(.glass)
+                            .glassButton()
                     }
                 }
             } else {
@@ -122,7 +122,7 @@ struct DownloadsPopover: View {
                 HStack {
                     Spacer()
                     Button("Очистить") { model.clearFinishedJobs() }
-                        .buttonStyle(.glass)
+                        .glassButton()
                         .controlSize(.small)
                         .disabled(!model.jobs.contains(where: { !$0.isActive }))
                 }

@@ -10,8 +10,8 @@
 [![Скачать Pipa](https://img.shields.io/badge/Скачать-Pipa.dmg-4C86F9?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/ukkvkkv/pipa/releases/latest/download/Pipa.dmg)
 
 [![Последний релиз](https://img.shields.io/github/v/release/ukkvkkv/pipa?style=flat-square&color=4C86F9&label=версия)](https://github.com/ukkvkkv/pipa/releases/latest)
-![macOS 26+](https://img.shields.io/badge/macOS-26%2B-111?style=flat-square&logo=apple)
-![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%E2%80%A6-111?style=flat-square)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111?style=flat-square&logo=apple)
+![Universal](https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-111?style=flat-square)
 ![Swift](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-F05138?style=flat-square&logo=swift&logoColor=white)
 [![MIT](https://img.shields.io/badge/лицензия-MIT-6E9BFF?style=flat-square)](LICENSE)
 
@@ -41,7 +41,7 @@ Pipa скачивает установочный файл прямо с серв
 | 📚 **Библиотека** | все скачанные `.ipa`: версия, минимальная iOS, размер, аккаунт |
 | 📱 **Установка** | на iPhone по USB одной кнопкой, с проверкой версии iOS |
 | 👥 **Аккаунты** | несколько Apple ID, переключение в настройках |
-| 🧊 **Liquid Glass** | нативный интерфейс macOS 26 |
+| 🧊 **Liquid Glass** | на macOS 26 — стекло, на 14–15 — привычный интерфейс |
 
 ---
 
@@ -64,7 +64,7 @@ Pipa скачивает установочный файл прямо с серв
 Дальше Pipa открывается как обычно. Всё нужное — `ipatool`, `ideviceinstaller`
 и их библиотеки — уже внутри, Homebrew ставить не надо.
 
-> **Требования:** Mac на Apple Silicon (M1 и новее), macOS 26 Tahoe или новее.
+> **Требования:** macOS 14 Sonoma или новее, любой Mac — Apple Silicon или Intel (сборка universal).
 
 ---
 
@@ -161,12 +161,7 @@ Pipa — открытый код, всё в этом репозитории. П�
 
 ## Сборка из исходников
 
-Нужны Xcode Command Line Tools и Homebrew-пакет `ideviceinstaller`
-(его бинарники и библиотеки вшиваются в приложение).
-
-```bash
-brew install ideviceinstaller
-```
+Нужны только Xcode Command Line Tools (`xcode-select --install`) с macOS SDK 26.
 
 ```bash
 ./build.command
@@ -174,6 +169,11 @@ brew install ideviceinstaller
 
 Получится `Pipa.app` рядом со скриптом. `./make_dmg.command` соберёт его же и
 упакует в `Pipa.dmg`. Иконка рисуется кодом: `swift assets/draw_icon.swift assets/logo.png`.
+
+`ideviceinstaller` и `ideviceinfo` лежат в `vendor/idevice/` готовыми — universal,
+статически собранные для macOS 11+. Пересобрать их из исходников (при обновлении
+версий): `brew install autoconf automake libtool pkg-config cmake`, затем
+`vendor/idevice/build.sh`.
 
 <details>
 <summary>Что где лежит</summary>
@@ -185,8 +185,10 @@ Sources/Pipa/     интерфейс на SwiftUI и логика
   ContentView.swift окно, панель, вход в Apple ID
   StoreViews.swift  поиск
   LocalViews.swift  библиотека, загрузки, настройки
+  Compat.swift      Liquid Glass на macOS 26 и замена ему на 14–15
 assets/           иконка и её генератор
 vendor/ipatool/   готовые бинарники ipatool-cpp (arm64 и x86_64)
+vendor/idevice/   ideviceinstaller и ideviceinfo + build.sh, который их собирает
 build.command     сборка Pipa.app
 make_dmg.command  сборка Pipa.dmg
 ```
