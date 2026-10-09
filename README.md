@@ -185,6 +185,14 @@ make_dmg.command  сборка Pipa.dmg
 
 ---
 
+## Поддержать
+
+Pipa бесплатная. Если она тебе пригодилась — можно закинуть на кофе 💙
+
+[![Поддержать через CloudTips](https://img.shields.io/badge/Поддержать-CloudTips-FF4F8B?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://pay.cloudtips.ru/p/ebe1daa2)
+
+Кнопка «Поддержать» есть и в настройках приложения.
+
 ## Лицензия
 
 Код Pipa — [MIT](LICENSE).

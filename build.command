@@ -7,7 +7,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP="$ROOT/Pipa.app"
-VERSION="1.14.0"
+VERSION="1.15.0"
 SCRATCH="$(getconf DARWIN_USER_CACHE_DIR)pipa/swift-build"
 MIN_MACOS="14.0"
 

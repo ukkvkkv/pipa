@@ -275,6 +275,19 @@ struct SettingsView: View {
                     Button("Изменить…", action: chooseFolder).fixedSize()
                 }
             }
+
+            SwiftUI.Section {
+                HStack(spacing: 10) {
+                    Image(systemName: "heart.fill").foregroundStyle(.pink).font(.title3)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Нравится Pipa?")
+                        Text("Поддержи разработку донатом").font(.callout).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Поддержать") { NSWorkspace.shared.open(Links.donate) }
+                        .glassButton(prominent: true)
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 460)
@@ -300,4 +313,8 @@ struct SettingsView: View {
             Task { await model.reloadLibrary() }
         }
     }
+}
+
+enum Links {
+    static let donate = URL(string: "https://pay.cloudtips.ru/p/ebe1daa2")!
 }
